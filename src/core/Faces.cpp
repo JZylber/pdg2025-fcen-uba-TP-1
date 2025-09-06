@@ -36,48 +36,137 @@
 
 #include <math.h>
 #include "Faces.hpp"
-  
-Faces::Faces(const int nV, const vector<int>& coordIndex) {
-  // TODO
+
+Faces::Faces(const int nV, const vector<int> &coordIndex)
+{
+  _coordIndex = coordIndex;
+  int maxVertex = nV - 1;
+  for (size_t i = 0; i < _coordIndex.size(); i++)
+  {
+    if (_coordIndex[i] > maxVertex)
+    {
+      maxVertex = _coordIndex[i];
+    }
+  }
+  _nV = maxVertex + 1;
 }
 
-int Faces::getNumberOfVertices() const {
-  // TODO
-  return 0;
+bool Faces::isValidFaceIndex(int iF) const
+{
+  return (iF >= 0 && iF < getNumberOfFaces());
 }
 
-int Faces::getNumberOfFaces() const {
-  // TODO
-  return 0;
+bool Faces::isNonSeparatorVertex(const int iC) const
+{
+  return iC >= 0 && iC < getNumberOfCorners() && _coordIndex[iC] != -1;
 }
 
-int Faces::getNumberOfCorners() const {
-  // TODO
-  return 0;
+int Faces::getNumberOfVertices() const
+{
+  return _nV;
 }
 
-int Faces::getFaceSize(const int iF) const {
-  // TODO
-  return 0;
+int Faces::getNumberOfFaces() const
+{
+  int nF = 0;
+  for (size_t i = 0; i < _coordIndex.size(); i++)
+  {
+    if (_coordIndex[i] == -1)
+    {
+      nF++;
+    }
+  }
+  return nF;
 }
 
-int Faces::getFaceFirstCorner(const int iF) const {
-  // TODO
+int Faces::getNumberOfCorners() const
+{
+  return (int)_coordIndex.size();
+}
+
+int Faces::getFaceSize(const int iF) const
+{
+  if (!isValidFaceIndex(iF))
+    return 0;
+  int currFace = 0;
+  int faceSize = 0;
+  for (size_t i = 0; i < _coordIndex.size(); i++)
+  {
+    if (_coordIndex[i] != -1)
+    {
+      if (currFace == iF)
+      {
+        faceSize++;
+      }
+    }
+    else
+    {
+      if (currFace == iF)
+      {
+        break;
+      }
+      currFace++;
+    }
+  }
+  return faceSize;
+}
+
+int Faces::getFaceFirstCorner(const int iF) const
+{
+  if (!isValidFaceIndex(iF))
+    return -1;
+  int currFace = 0;
+  for (size_t i = 0; i < _coordIndex.size(); i++)
+  {
+    if (_coordIndex[i] != -1)
+    {
+      if (currFace == iF)
+      {
+        return i;
+      }
+    }
+    else
+    {
+      currFace++;
+    }
+  }
   return -1;
 }
 
-int Faces::getFaceVertex(const int iF, const int j) const {
-  // TODO
+int Faces::getFaceVertex(const int iF, const int j) const
+{
+  if (!isValidFaceIndex(iF))
+    return -1;
+  int faceSize = getFaceSize(iF);
+  if (j >= 0 && j < faceSize)
+  {
+    int faceStart = getFaceFirstCorner(iF);
+    return _coordIndex[faceStart + j];
+  }
   return -1;
 }
 
-int Faces::getCornerFace(const int iC) const {
-  // TODO
-  return -1;
+int Faces::getCornerFace(const int iC) const
+{
+  if (!isNonSeparatorVertex(iC))
+    return -1;
+  int faceNumber = 0;
+  for (size_t i = iC; i >= 0; i--)
+  {
+    if (_coordIndex[i] == -1)
+    {
+      faceNumber++;
+    }
+  }
+  return faceNumber;
 }
 
-int Faces::getNextCorner(const int iC) const {
-  // TODO
-  return -1;
+int Faces::getNextCorner(const int iC) const
+{
+  if (!isNonSeparatorVertex(iC))
+    return -1;
+  int faceNumber = getCornerFace(iC);
+  int faceSize = getFaceSize(faceNumber);
+  int faceStart = getFaceFirstCorner(faceNumber);
+  return (iC + 1 - faceStart) % faceSize + faceStart;
 }
-
