@@ -57,44 +57,65 @@ bool LoaderStl::loadIndexedFaceSet(Tokenizer &tkn, IndexedFaceSet &ifs)
   vector<float> &coord = ifs.getCoord();
   vector<float> &normal = ifs.getNormal();
   // First token should be "facet"
-  if (tkn.expecting("facet"))
+  if (tkn.equals("facet"))
   {
     // Second token should be "normal"
     if (tkn.expecting("normal"))
     {
       // Third, fourth, and fifth tokens should be the components of the face normal
       Vec3f *faceNormal = new Vec3f();
-      tkn.getVec3f(*faceNormal);
-      normal.push_back(faceNormal->x);
-      normal.push_back(faceNormal->y);
-      normal.push_back(faceNormal->z);
+      bool gotNormal = tkn.getVec3f(*faceNormal);
+      if (gotNormal)
+      {
+        normal.push_back(faceNormal->x);
+        normal.push_back(faceNormal->y);
+        normal.push_back(faceNormal->z);
+      }
+      else
+      {
+        throw new StrException("expecting 3d vector for normal, found " + tkn);
+      }
 
       if (tkn.expecting("outer") && tkn.expecting("loop"))
       {
-        while (!tkn.expecting("endloop"))
+        while (tkn.get() && !tkn.equals("endloop"))
         {
-          if (tkn.expecting("vertex"))
+          if (tkn.equals("vertex"))
           {
             Vec3f *vertex = new Vec3f();
-            tkn.getVec3f(*vertex);
-            coord.push_back(vertex->x);
-            coord.push_back(vertex->y);
-            coord.push_back(vertex->z);
-            coordIndex.push_back((int)(coord.size() / 3 - 1));
+            bool gotVector = tkn.getVec3f(*vertex);
+            if (gotVector)
+            {
+              coord.push_back(vertex->x);
+              coord.push_back(vertex->y);
+              coord.push_back(vertex->z);
+              coordIndex.push_back((int)(coord.size() / 3 - 1));
+            }
+            else
+            {
+              throw new StrException("expecting 3d vector for vertex, found " + tkn);
+            }
           }
           else
-          {
-            return false;
-          }
+            throw new StrException("expecting vertex, found " + tkn);
         }
+        coordIndex.push_back(-1); // end of face
       }
+      else
+        throw new StrException("expecting outer loop, found " + tkn);
     }
     else
-      return false;
+      throw new StrException("expecting normal, found " + tkn);
   }
+  else
+    throw new StrException("expecting facet, found " + tkn);
   // Last token should be "endfacet"
   if (tkn.expecting("endfacet"))
     success = true;
+  else
+  {
+    throw new StrException("expecting endfacet, found " + tkn);
+  }
   return success;
 }
 
@@ -156,7 +177,7 @@ bool LoaderStl::load(const char *filename, SceneGraph &wrl)
       // endfacet
 
       // - run an infinite loop to parse all the faces
-      while (!tkn.expecting("endsolid"))
+      while (tkn.get() && !tkn.equals("endsolid"))
       {
         bool faceParsed = loadIndexedFaceSet(tkn, *ifs);
         // - write a private method to parse each face within the loop
