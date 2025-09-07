@@ -47,41 +47,103 @@
 // reference
 // https://en.wikipedia.org/wiki/STL_(file_format)
 
-const char* LoaderStl::_ext = "stl";
+const char *LoaderStl::_ext = "stl";
 
-bool LoaderStl::load(const char* filename, SceneGraph& wrl) {
+bool LoaderStl::loadIndexedFaceSet(Tokenizer &tkn, IndexedFaceSet &ifs)
+{
+  bool success = false;
+  // get references to the coordIndex, coord, and normal arrays
+  vector<int> &coordIndex = ifs.getCoordIndex();
+  vector<float> &coord = ifs.getCoord();
+  vector<float> &normal = ifs.getNormal();
+  // First token should be "facet"
+  if (tkn.expecting("facet"))
+  {
+    // Second token should be "normal"
+    if (tkn.expecting("normal"))
+    {
+      // Third, fourth, and fifth tokens should be the components of the face normal
+      Vec3f *faceNormal = new Vec3f();
+      tkn.getVec3f(*faceNormal);
+      normal.push_back(faceNormal->x);
+      normal.push_back(faceNormal->y);
+      normal.push_back(faceNormal->z);
+
+      if (tkn.expecting("outer") && tkn.expecting("loop"))
+      {
+        while (!tkn.expecting("endloop"))
+        {
+          if (tkn.expecting("vertex"))
+          {
+            Vec3f *vertex = new Vec3f();
+            tkn.getVec3f(*vertex);
+            coord.push_back(vertex->x);
+            coord.push_back(vertex->y);
+            coord.push_back(vertex->z);
+            coordIndex.push_back((int)(coord.size() / 3 - 1));
+          }
+          else
+          {
+            return false;
+          }
+        }
+      }
+    }
+    else
+      return false;
+  }
+  // Last token should be "endfacet"
+  if (tkn.expecting("endfacet"))
+    success = true;
+  return success;
+}
+
+bool LoaderStl::load(const char *filename, SceneGraph &wrl)
+{
   bool success = false;
 
   // clear the scene graph
   wrl.clear();
   wrl.setUrl("");
 
-  FILE* fp = (FILE*)0;
-  try {
+  FILE *fp = (FILE *)0;
+  try
+  {
 
     // open the file
-    if(filename==(char*)0) throw new StrException("filename==null");
-    fp = fopen(filename,"r");
-    if(fp==(FILE*)0) throw new StrException("fp==(FILE*)0");
+    if (filename == (char *)0)
+      throw new StrException("filename==null");
+    fp = fopen(filename, "r");
+    if (fp == (FILE *)0)
+      throw new StrException("fp==(FILE*)0");
 
     // use the io/Tokenizer class to parse the input ascii file
 
     TokenizerFile tkn(fp);
     // first token should be "solid"
-    if(tkn.expecting("solid") && tkn.get()) {
+    if (tkn.expecting("solid"))
+    {
+      tkn.get();
       string stlName = tkn; // second token should be the solid name
-
-      // TODO ...
-
       // create the scene graph structure :
       // 1) the SceneGraph should have a single Shape node a child
+      Shape *shape = new Shape();
+      shape->setName(stlName);
+      wrl.addChild(shape);
       // 2) the Shape node should have an Appearance node in its appearance field
+      Appearance *appearance = new Appearance();
+      shape->setAppearance(appearance);
       // 3) the Appearance node should have a Material node in its material field
+      Material *material = new Material();
+      appearance->setMaterial(material);
       // 4) the Shape node should have an IndexedFaceSet node in its geometry node
+      IndexedFaceSet *ifs = new IndexedFaceSet();
+      shape->setGeometry(ifs);
 
       // from the IndexedFaceSet
-      // 5) get references to the coordIndex, coord, and normal arrays
-      // 6) set the normalPerVertex variable to false (i.e., normals per face)  
+      // 5) get references to the coordIndex, coord, and normal arrays (on private method)
+      // 6) set the normalPerVertex variable to false (i.e., normals per face)
+      ifs->setNormalPerVertex(false);
 
       // the file should contain a list of triangles in the following format
 
@@ -94,26 +156,33 @@ bool LoaderStl::load(const char* filename, SceneGraph& wrl) {
       // endfacet
 
       // - run an infinite loop to parse all the faces
-      // - write a private method to parse each face within the loop
-      // - the method should return true if successful, and false if not
-      // - if your method returns tru
-      //     update the normal, coord, and coordIndex variables
-      // - if your method returns false
-      //     throw an StrException explaining why the method failed
-
+      while (!tkn.expecting("endsolid"))
+      {
+        bool faceParsed = loadIndexedFaceSet(tkn, *ifs);
+        // - write a private method to parse each face within the loop
+        // - the method should return true if successful, and false if not
+        // - if your method returns tru
+        //     update the normal, coord, and coordIndex variables
+        // - if your method returns false
+        //     throw an StrException explaining why the method failed
+        if (!faceParsed)
+        {
+          throw new StrException("error when loading face");
+        }
+      }
     }
-
     // close the file (this statement may not be reached)
     fclose(fp);
-    
-  } catch(StrException* e) { 
-    
-    if(fp!=(FILE*)0) fclose(fp);
-    fprintf(stderr,"ERROR | %s\n",e->what());
-    delete e;
+    success = true;
+  }
+  catch (StrException *e)
+  {
 
+    if (fp != (FILE *)0)
+      fclose(fp);
+    fprintf(stderr, "ERROR | %s\n", e->what());
+    delete e;
   }
 
   return success;
 }
-

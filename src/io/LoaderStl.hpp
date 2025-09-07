@@ -41,21 +41,21 @@
 #include "Tokenizer.hpp"
 
 #include "wrl/Node.hpp"
+#include "wrl/IndexedFaceSet.hpp"
 
-class LoaderStl : public Loader {
+class LoaderStl : public Loader
+{
 
 private:
-
-  const static char* _ext;
+  const static char *_ext;
+  bool loadIndexedFaceSet(Tokenizer &tkn, IndexedFaceSet &ifs);
 
 public:
-
-  LoaderStl()  {};
+  LoaderStl() {};
   ~LoaderStl() {};
 
-  bool  load(const char* filename, SceneGraph& wrl);
-  const char* ext() const { return _ext; }
-
+  bool load(const char *filename, SceneGraph &wrl);
+  const char *ext() const { return _ext; }
 };
 
 #endif /* _LOADER_STL_HPP_ */
