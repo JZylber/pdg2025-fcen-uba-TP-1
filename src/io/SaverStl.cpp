@@ -43,48 +43,82 @@
 
 #include "core/Faces.hpp"
 
-const char* SaverStl::_ext = "stl";
+const char *SaverStl::_ext = "stl";
 
 //////////////////////////////////////////////////////////////////////
-bool SaverStl::save(const char* filename, SceneGraph& wrl) const {
+bool SaverStl::save(const char *filename, SceneGraph &wrl) const
+{
   bool success = false;
-  if(filename!=(char*)0) {
+  if (filename != (char *)0)
+  {
 
     // Check these conditions
 
     // 1) the SceneGraph should have a single child
     // 2) the child should be a Shape node
     // 3) the geometry of the Shape node should be an IndexedFaceSet node
+    if (wrl.getNumberOfChildren() != 1)
+      return false;
+    Node *node = wrl[0];
+    if (!node->isShape())
+      return false;
+    Shape *shape = (Shape *)node;
+    node = shape->getGeometry();
+    if (!node->isIndexedFaceSet())
+      return false;
+    IndexedFaceSet *ifs = (IndexedFaceSet *)node;
+    if (!ifs->isTriangleMesh())
+      return false;
+    if (!(ifs->getNumberOfNormal() == ifs->getNumberOfFaces()))
+      return false;
 
     // - construct an instance of the Faces class from the IndexedFaceSet
     // - remember to delete it when you are done with it (if necessary)
     //   before returning
 
     // 4) the IndexedFaceSet should be a triangle mesh
-    // 5) the IndexedFaceSet should have normals per face
+    // 5) the IndexedFaceSet should have normals per face PENDING
 
     // if (all the conditions are satisfied) {
-
-    FILE* fp = fopen(filename,"w");
-    if(	fp!=(FILE*)0) {
+    Faces *faces = new Faces(ifs->getNumberOfCoord(), ifs->getCoordIndex());
+    vector<float> &coord = ifs->getCoord();
+    vector<float> &normal = ifs->getNormal();
+    FILE *fp = fopen(filename, "w");
+    if (fp != (FILE *)0)
+    {
 
       // if set, use ifs->getName()
       // otherwise use filename,
       // but first remove directory and extension
-
-      fprintf(fp,"solid %s\n",filename);
-
-      // TODO ...
-      // for each face {
-      //   ...
-      // }
-      
+      std::string name = ifs->getName();
+      if (name.empty())
+      {
+        std::string cleanFilename(filename);
+        size_t pos = cleanFilename.find_last_of("/\\");
+        size_t dot = cleanFilename.find_last_of(".");
+        name = cleanFilename.substr(pos + 1, dot - pos - 1);
+      }
+      fprintf(fp, "solid %s\n", name.c_str());
+      for (size_t nFace = 0; nFace < faces->getNumberOfFaces(); nFace++)
+      {
+        vector<float> faceNormal = {normal[nFace * 3], normal[nFace * 3 + 1], normal[nFace * 3 + 2]};
+        fprintf(fp, " facet normal %f %f %f\n", faceNormal[0], faceNormal[1], faceNormal[2]);
+        fprintf(fp, "  outer loop\n");
+        // 3 vertexes since its a triangle mesh
+        for (size_t nCorner = 0; nCorner < 3; nCorner++)
+        {
+          int iV = faces->getFaceVertex(nFace, nCorner);
+          vector<float> vertex = {coord[iV * 3], coord[iV * 3 + 1], coord[iV * 3 + 2]};
+          fprintf(fp, "   vertex %f %f %f\n", vertex[0], vertex[1], vertex[2]);
+        }
+        fprintf(fp, "  endloop\n");
+        fprintf(fp, " endfacet\n");
+      }
+      fprintf(fp, "endsolid %s\n", name.c_str());
       fclose(fp);
       success = true;
     }
-
     // } endif (all the conditions are satisfied)
-
   }
   return success;
 }
