@@ -40,9 +40,19 @@
 Faces::Faces(const int nV, const vector<int> &coordIndex)
 {
   _coordIndex = coordIndex;
+  _faceStartIndex = vector<int>();
   int maxVertex = nV - 1;
+  int currentFace = 0;
   for (size_t i = 0; i < _coordIndex.size(); i++)
   {
+    if (_faceStartIndex.size() - 1 < currentFace)
+    {
+      _faceStartIndex.push_back(i);
+    }
+    if (_coordIndex[i] == -1)
+    {
+      currentFace++;
+    }
     if (_coordIndex[i] > maxVertex)
     {
       maxVertex = _coordIndex[i];
@@ -68,15 +78,7 @@ int Faces::getNumberOfVertices() const
 
 int Faces::getNumberOfFaces() const
 {
-  int nF = 0;
-  for (size_t i = 0; i < _coordIndex.size(); i++)
-  {
-    if (_coordIndex[i] == -1)
-    {
-      nF++;
-    }
-  }
-  return nF;
+  return (int)_faceStartIndex.size();
 }
 
 int Faces::getNumberOfCorners() const
@@ -88,49 +90,15 @@ int Faces::getFaceSize(const int iF) const
 {
   if (!isValidFaceIndex(iF))
     return 0;
-  int currFace = 0;
-  int faceSize = 0;
-  for (size_t i = 0; i < _coordIndex.size(); i++)
-  {
-    if (_coordIndex[i] != -1)
-    {
-      if (currFace == iF)
-      {
-        faceSize++;
-      }
-    }
-    else
-    {
-      if (currFace == iF)
-      {
-        break;
-      }
-      currFace++;
-    }
-  }
-  return faceSize;
+  int faceStart = getFaceFirstCorner(iF);
+  int faceEnd = (iF + 1 < getNumberOfFaces()) ? getFaceFirstCorner(iF + 1) : (int)_coordIndex.size();
+  return faceEnd - faceStart - 1; // exclude the -1 separator
 }
-
 int Faces::getFaceFirstCorner(const int iF) const
 {
   if (!isValidFaceIndex(iF))
     return -1;
-  int currFace = 0;
-  for (size_t i = 0; i < _coordIndex.size(); i++)
-  {
-    if (_coordIndex[i] != -1)
-    {
-      if (currFace == iF)
-      {
-        return i;
-      }
-    }
-    else
-    {
-      currFace++;
-    }
-  }
-  return -1;
+  return _faceStartIndex[iF];
 }
 
 int Faces::getFaceVertex(const int iF, const int j) const
@@ -151,12 +119,12 @@ int Faces::getCornerFace(const int iC) const
   if (!isNonSeparatorVertex(iC))
     return -1;
   int faceNumber = 0;
-  for (size_t i = iC; i >= 0; i--)
+  for (size_t i = 0; i < _faceStartIndex.size(); i++)
   {
-    if (_coordIndex[i] == -1)
-    {
-      faceNumber++;
-    }
+    if (iC >= _faceStartIndex[i])
+      faceNumber = (int)i;
+    else
+      break;
   }
   return faceNumber;
 }
