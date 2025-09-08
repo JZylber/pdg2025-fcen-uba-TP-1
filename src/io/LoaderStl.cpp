@@ -70,12 +70,13 @@ bool LoaderStl::loadIndexedFaceSet(Tokenizer &tkn, IndexedFaceSet &ifs)
         normal.push_back(faceNormal->x);
         normal.push_back(faceNormal->y);
         normal.push_back(faceNormal->z);
+        delete faceNormal;
       }
       else
       {
+        delete faceNormal;
         throw new StrException("expecting 3d vector for normal, found " + tkn);
       }
-
       if (tkn.expecting("outer") && tkn.expecting("loop"))
       {
         while (tkn.get() && !tkn.equals("endloop"))
@@ -89,10 +90,12 @@ bool LoaderStl::loadIndexedFaceSet(Tokenizer &tkn, IndexedFaceSet &ifs)
               coord.push_back(vertex->x);
               coord.push_back(vertex->y);
               coord.push_back(vertex->z);
+              delete vertex;
               coordIndex.push_back((int)(coord.size() / 3 - 1));
             }
             else
             {
+              delete vertex;
               throw new StrException("expecting 3d vector for vertex, found " + tkn);
             }
           }
