@@ -40,19 +40,17 @@
 Faces::Faces(const int nV, const vector<int> &coordIndex)
 {
   _coordIndex = coordIndex;
-  _faceStartIndex = vector<int>();
   int maxVertex = nV - 1;
-  int currentFace = 0;
+  size_t currentFace = 0;
   for (size_t i = 0; i < _coordIndex.size(); i++)
   {
-    if (_faceStartIndex.size() - 1 < currentFace)
+    if (currentFace >= _faceStartIndex.size())
     {
       _faceStartIndex.push_back(i);
     }
     if (_coordIndex[i] == -1)
-    {
       currentFace++;
-    }
+
     if (_coordIndex[i] > maxVertex)
     {
       maxVertex = _coordIndex[i];

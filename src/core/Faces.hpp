@@ -94,7 +94,7 @@ public:
 
 private:
   vector<int> _coordIndex;
-  vector<int> _faceStartIndex;
+  vector<size_t> _faceStartIndex;
   int _nV;
 };
 
