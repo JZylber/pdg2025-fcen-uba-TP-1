@@ -49,8 +49,10 @@ Faces::Faces(const int nV, const vector<int> &coordIndex)
       _faceStartIndex.push_back(i);
     }
     if (_coordIndex[i] == -1)
+    {
+      _coordIndex[i] = -1 * (currentFace + 1); // mark the -1 separator with a negative face index
       currentFace++;
-
+    }
     if (_coordIndex[i] > maxVertex)
     {
       maxVertex = _coordIndex[i];
@@ -116,14 +118,10 @@ int Faces::getCornerFace(const int iC) const
 {
   if (!isNonSeparatorVertex(iC))
     return -1;
-  int faceNumber = 0;
-  for (size_t i = 0; i < _faceStartIndex.size(); i++)
-  {
-    if (iC >= _faceStartIndex[i])
-      faceNumber = (int)i;
-    else
-      break;
-  }
+  size_t i = (size_t)iC;
+  while (_coordIndex[i] >= 0)
+    i++;
+  int faceNumber = -1 * _coordIndex[i] - 1;
   return faceNumber;
 }
 
