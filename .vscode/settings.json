@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "*.pro": "prolog",
-        "vector": "cpp"
-    }
-}
